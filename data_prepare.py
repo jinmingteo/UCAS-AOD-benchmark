@@ -17,8 +17,7 @@ def copyfiles(src_files, dst_folder, is_plane = False):
             _filename = os.path.split(file)[1]
             name, ext = os.path.splitext(_filename)
             filename = 'P' + str(int(name.strip('P')) + 510).zfill(4) + ext
-        dstfile = os.path.join(dst_folder, filename)
-        # print(dstfile)
+        dstfile = os.path.join(dst_folder, 'UCAS_AOD_' + filename)
         shutil.copyfile(file, dstfile)
 
 
@@ -32,36 +31,48 @@ def rewrite_label(annos, dst_folder, is_plane = False):
             _filename = os.path.split(file)[1]
             name, ext = os.path.splitext(_filename)
             filename = 'P' + str(int(name.strip('P')) + 510).zfill(4) + ext
-        dstfile = os.path.join(dst_folder, filename)
-        # print(dstfile)
+        dstfile = os.path.join(dst_folder, 'UCAS_AOD_' +  filename)
+        
         with open(dstfile, 'w') as fw:
             with open(file, 'r') as f:
                 _lines = f.readlines()
-                if is_plane:
-                    lines = ['airplane  ' + x for x in _lines]  
-                else:
-                    lines = ['car  ' + x for x in _lines]  
-                content = ''.join(lines)
-                fw.write(content)
+                lines = []
+                # _line is x1 y1 x2 y2 x3 y3 x4 y4 theta cx cy w h
+                # line shoule be ['x 1', 'y 1', 'x 2', 'y 2', 'x 3', 'y 3', 'x 4', 'y 4', 'category', 'difficult'])
+                for line in _lines:
+                    line = line.split('\t')
+                    line = line[:8] #drop theta and all
+                    line = [str(int(float(item))) for item in line]
+                    
+                    if is_plane:
+                        line.append('plane')
+                    else:
+                        line.append('small-vehicle')
+                    line.append('1') # difficulty
+                    lines.append(' '.join(line))
+                
+                fw.write('imagesource: UCAS_AOD\n')
+                fw.write('gsd: -1\n')
+                fw.write('\n'.join(lines))
 
 def creat_tree(root_dir):
     if not os.path.exists(root_dir):
         raise RuntimeError('invalid dataset path!')
-    os.mkdir(os.path.join(root_dir, 'AllImages'))
-    os.mkdir(os.path.join(root_dir, 'Annotations'))
+    os.makedirs(os.path.join(root_dir, 'images'), exist_ok=True)
+    os.makedirs(os.path.join(root_dir, 'orig_labelTxt'), exist_ok=True)
     car_imgs = glob.glob(os.path.join(root_dir, 'CAR/*.png'))
     car_annos = glob.glob(os.path.join(root_dir, 'CAR/P*.txt'))
     airplane_imgs = glob.glob(os.path.join(root_dir, 'PLANE/*.png'))
     airplane_annos = glob.glob(os.path.join(root_dir, 'PLANE/P*.txt'))   
-    copyfiles(car_imgs,  os.path.join(root_dir, 'AllImages') ) 
-    copyfiles(airplane_imgs,  os.path.join(root_dir, 'AllImages'), True)
-    rewrite_label(car_annos, os.path.join(root_dir, 'Annotations'))
-    rewrite_label(airplane_annos, os.path.join(root_dir, 'Annotations'), True)
+    copyfiles(car_imgs,  os.path.join(root_dir, 'images') ) 
+    copyfiles(airplane_imgs,  os.path.join(root_dir, 'images'), True)
+    rewrite_label(car_annos, os.path.join(root_dir, 'orig_labelTxt'))
+    rewrite_label(airplane_annos, os.path.join(root_dir, 'orig_labelTxt'), True)
 
 
 def generate_test(root_dir):
     setfile = os.path.join(root_dir, 'ImageSets/test.txt')
-    img_dir = os.path.join(root_dir, 'AllImages')
+    img_dir = os.path.join(root_dir, 'images')
     test_dir = os.path.join(root_dir, 'Test')
     os.makedirs(test_dir)
     if not os.path.exists(setfile):
@@ -103,7 +114,7 @@ def generate_test(root_dir):
 
 
 if __name__ == "__main__":
-    root_dir = '/data-input/das_dota/UCAS_AOD'
+    root_dir = '/drive/fish/UCAS_AOD'
     creat_tree(root_dir)
     generate_test(root_dir)
 
