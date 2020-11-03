@@ -47,12 +47,12 @@ def rewrite_label(annos, dst_folder, is_plane = False):
                     if is_plane:
                         line.append('plane')
                     else:
-                        line.append('small-vehicle')
+                        line.append('vehicle')
                     line.append('1') # difficulty
                     lines.append(' '.join(line))
                 
-                fw.write('imagesource: UCAS_AOD\n')
-                fw.write('gsd: -1\n')
+                # fw.write('imagesource: UCAS_AOD\n')
+                # fw.write('gsd: -1\n')
                 fw.write('\n'.join(lines))
 
 def creat_tree(root_dir):
